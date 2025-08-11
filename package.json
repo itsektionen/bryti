@@ -1,0 +1,21 @@
+{
+  "name": "bryti",
+  "version": "1.0.0",
+  "description": "Management bot for the IT-chapter Discord server",
+  "main": "bot.js",
+  "type": "module",
+  "scripts": {
+    "lint": "prettier --check *.js package.json",
+    "format": "prettier --write *.js package.json"
+  },
+  "author": "",
+  "license": "MIT",
+  "packageManager": "pnpm@10.14.0",
+  "dependencies": {
+    "discord.js": "^14.21.0",
+    "dotenv": "^17.2.1"
+  },
+  "devDependencies": {
+    "prettier": "^3.6.2"
+  }
+}
