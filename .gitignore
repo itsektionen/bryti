@@ -3,3 +3,5 @@ node_modules
 *.log
 debug.js
 config.json
+allowed_roles.json
+reception_data.json
