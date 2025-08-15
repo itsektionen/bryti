@@ -4,6 +4,7 @@ import path from 'node:path';
 
 const ALLOWED_ROLES = path.resolve('allowed_roles.json');
 const RECEPTION_DATA = path.resolve('reception_data.json');
+const ROLE_SETTINGS = path.resolve('role_settings.json');
 const YEAR = new Date().getFullYear();
 
 export default {
@@ -61,9 +62,15 @@ export default {
     const requiredRoles = ['nollan', 'ingen', 'mux', 'fadder', 'doq'];
     const roleIds = {};
     let savedRoles = {};
+    let receptionRoles = [];
     try {
       const data = await fs.readFile(RECEPTION_DATA, 'utf8');
-      savedRoles = JSON.parse(data).roles;
+      const parsedRoles = JSON.parse(data);
+      savedRoles = parsedRoles.roles || {};
+      receptionRoles = [
+        ...Object.values(parsedRoles.roles || {}),
+        ...Object.values(parsedRoles.groups || {})
+      ];
     } catch (err) {
       return interaction.reply({
         content: "⚠️ Could not read `reception_data.json` or it's invalid.",
@@ -243,12 +250,32 @@ export default {
       `🔄 **Setting up reception for ${YEAR}...**`,
       `✅ Created roles: ${createdRoles.join(', ')}`,
       `✅ Created channels: ${createdChannels.join(', ')}`,
+      `🔄 Editing old roles...`,
     ].join('\n'));
+
+    const bot = await interaction.guild.members.fetchMe();
+    const botRole = bot.roles.highest.position;
+    const roleSettings = {};
+    for (const role of interaction.guild.roles.cache.values()) {
+      if (!receptionRoles.includes(role.id) && !role.managed && role.position < botRole) {
+        roleSettings[role.id] = {
+          color: role.color,
+          hoist: role.hoist
+        };
+        await role.edit({
+          color: 0,
+          hoist: false,
+          reason: `Edited by ${interaction.user.tag} using /${interaction.commandName}`
+        });
+      }
+    }
+    await fs.writeFile(ROLE_SETTINGS, JSON.stringify(roleSettings, null, 2), 'utf8');
 
     await interaction.editReply([
       `✅ **Successfully set up reception for ${YEAR}!**`,
       `✅ Created roles: ${createdRoles.join(', ')}`,
       `✅ Created channels: ${createdChannels.join(', ')}`,
+      `✅ Edited old roles to not have color and displayed separately`,
       `\nℹ️ Make sure to fix the onboarding questions to be able to get the nØllan role.`,
       `       Double check that no roles that grant access to other channels can be selected in the onboarding.`
     ].join('\n'));
