@@ -1,4 +1,4 @@
-import { SlashCommandBuilder, ChannelType } from 'discord.js';
+import { SlashCommandBuilder, ChannelType, MessageFlags } from 'discord.js';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 
@@ -19,7 +19,7 @@ export default {
         .setRequired(true)
     ),
   async execute(interaction) {
-    await interaction.deferReply({ ephemeral: true });
+    await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 
     const receptionCategoryName = interaction.options.getString('receptioncategory');
     const receptionCategory = interaction.guild.channels.cache.find(
