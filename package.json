@@ -5,8 +5,12 @@
   "main": "bot.js",
   "type": "module",
   "scripts": {
-    "lint": "prettier --check *.js package.json",
-    "format": "prettier --write *.js package.json"
+    "run": "node bot.js",
+    "run:test": "node bot.js --test",
+    "deploy": "node deployCommands.js",
+    "deploy:test": "node deployCommands.js --test",
+    "lint": "prettier --check .",
+    "format": "prettier --write ."
   },
   "author": "",
   "license": "MIT",
