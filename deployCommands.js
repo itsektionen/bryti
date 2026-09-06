@@ -1,6 +1,6 @@
 import { REST, Routes } from 'discord.js';
-import { env, logTarget } from './config/env.js';
 import { getCommands } from './getCommands.js';
+import { env, logTarget } from './config/env.js';
 
 const commands = await getCommands(env.rootDir);
 const rest = new REST().setToken(env.token);

@@ -1,32 +1,18 @@
-import fs from 'node:fs';
 import path from 'node:path';
-import { pathToFileURL } from 'node:url';
+import { loadModules, collect } from './loadModules.js';
+
+function isCommand(value) {
+  return typeof value === 'object' && 'data' in value && 'execute' in value;
+}
 
 export async function getCommands(baseDir, asMap = false) {
-  const commandsDir = path.join(baseDir, 'commands');
-  const commandFolders = fs.readdirSync(commandsDir);
-  const commands = asMap ? new Map() : [];
-  for (const folder of commandFolders) {
-    const commandsPath = path.join(commandsDir, folder);
-    const commandFiles = fs
-      .readdirSync(commandsPath)
-      .filter((file) => file.endsWith('.js'));
-    for (const file of commandFiles) {
-      const filePath = path.join(commandsPath, file);
-      const commandModule = await import(pathToFileURL(filePath).href);
-      const command = commandModule.default;
-      if ('data' in command && 'execute' in command) {
-        if (asMap) {
-          commands.set(command.data.name, command);
-        } else {
-          commands.push(command.data.toJSON());
-        }
-      } else {
-        console.warn(
-          `${filePath} is missing a required "data" or "execute" property.`
-        );
-      }
-    }
-  }
-  return commands;
+  const modules = await loadModules(path.join(baseDir, 'commands'));
+  const commands = collect(modules, {
+    keyOf: (command) => command.data.name,
+    isValid: isCommand,
+    label: 'command',
+  });
+
+  if (asMap) return commands;
+  return [...commands.values()].map((command) => command.data.toJSON());
 }
