@@ -1,5 +1,3 @@
-import 'dotenv/config';
-import path from 'node:path';
 import {
   Client,
   Events,
@@ -7,13 +5,15 @@ import {
   MessageFlags,
   ActivityType,
 } from 'discord.js';
+import { env, logTarget } from './config/env.js';
 import { getCommands } from './getCommands.js';
 
 const client = new Client({ intents: [GatewayIntentBits.Guilds] });
 
-client.commands = await getCommands(path.resolve(), true);
+client.commands = await getCommands(env.rootDir, true);
 
-client.login(process.env.TOKEN);
+logTarget('Starting bot');
+client.login(env.token);
 
 client.once(Events.ClientReady, (client) => {
   console.log(
