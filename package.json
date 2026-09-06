@@ -1,6 +1,6 @@
 {
   "name": "bryti",
-  "version": "1.0.1",
+  "version": "1.1.0",
   "description": "Management bot for the IT-chapter Discord server",
   "main": "bot.js",
   "type": "module",
@@ -14,8 +14,9 @@
   },
   "author": "",
   "license": "MIT",
-  "packageManager": "pnpm@10.14.0",
+  "packageManager": "pnpm@12.3.4",
   "dependencies": {
+    "better-sqlite3": "^13.0.3",
     "discord.js": "^14.27.0",
     "dotenv": "^17.4.2"
   },
