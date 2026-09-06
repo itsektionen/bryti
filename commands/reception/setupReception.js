@@ -1,4 +1,9 @@
-import { SlashCommandBuilder, ChannelType, PermissionsBitField, MessageFlags } from 'discord.js';
+import {
+  SlashCommandBuilder,
+  ChannelType,
+  PermissionsBitField,
+  MessageFlags,
+} from 'discord.js';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 
@@ -10,32 +15,30 @@ const YEAR = new Date().getFullYear();
 export default {
   data: new SlashCommandBuilder()
     .setName('setupreception')
-    .setDescription('Sets up the server for reception. Adds roles, creates channels, etc.')
-    .addStringOption(option =>
-      option.setName("groups")
-        .setDescription("Names of the nØllegroups (comma or space separated)")
+    .setDescription(
+      'Sets up the server for reception. Adds roles, creates channels, etc.'
+    )
+    .addStringOption((option) =>
+      option
+        .setName('groups')
+        .setDescription('Names of the nØllegroups (comma or space separated)')
         .setRequired(true)
         .setMinLength(2)
     )
-    .addRoleOption(option =>
-      option.setName("nollan")
-        .setDescription("The nØllan role")
+    .addRoleOption((option) =>
+      option.setName('nollan').setDescription('The nØllan role')
     )
-    .addRoleOption(option =>
-      option.setName("ingen")
-        .setDescription("The INGEN&NÅGON role")
+    .addRoleOption((option) =>
+      option.setName('ingen').setDescription('The INGEN&NÅGON role')
     )
-    .addRoleOption(option =>
-      option.setName("mux")
-        .setDescription("The MUX role")
+    .addRoleOption((option) =>
+      option.setName('mux').setDescription('The MUX role')
     )
-    .addRoleOption(option =>
-      option.setName("fadder")
-        .setDescription("The Fadder role")
+    .addRoleOption((option) =>
+      option.setName('fadder').setDescription('The Fadder role')
     )
-    .addRoleOption(option =>
-      option.setName("doq")
-        .setDescription("The Doq role")
+    .addRoleOption((option) =>
+      option.setName('doq').setDescription('The Doq role')
     ),
   async execute(interaction) {
     let allowedRoles = [];
@@ -46,16 +49,18 @@ export default {
     } catch (err) {
       return interaction.reply({
         content: "⚠️ Could not read `allowed_roles.json` or it's invalid.",
-        flags: MessageFlags.Ephemeral
+        flags: MessageFlags.Ephemeral,
       });
     }
 
     const memberRoles = interaction.member.roles.cache;
-    const hasPermission = allowedRoles.some(roleId => memberRoles.has(roleId));
+    const hasPermission = allowedRoles.some((roleId) =>
+      memberRoles.has(roleId)
+    );
     if (!hasPermission) {
       return interaction.reply({
-        content: "⛔ You do not have permission to run this command.",
-        flags: MessageFlags.Ephemeral
+        content: '⛔ You do not have permission to run this command.',
+        flags: MessageFlags.Ephemeral,
       });
     }
 
@@ -69,21 +74,24 @@ export default {
       savedRoles = parsedRoles.roles || {};
       receptionRoles = [
         ...Object.values(parsedRoles.roles || {}),
-        ...Object.values(parsedRoles.groups || {})
+        ...Object.values(parsedRoles.groups || {}),
       ];
     } catch (err) {
       return interaction.reply({
         content: "⚠️ Could not read `reception_data.json` or it's invalid.",
-        flags: MessageFlags.Ephemeral
+        flags: MessageFlags.Ephemeral,
       });
     }
 
     for (const roleName of requiredRoles) {
-      const role = interaction.options.getRole(roleName) || (savedRoles[roleName] && interaction.guild.roles.cache.get(savedRoles[roleName]));
+      const role =
+        interaction.options.getRole(roleName) ||
+        (savedRoles[roleName] &&
+          interaction.guild.roles.cache.get(savedRoles[roleName]));
       if (!role) {
         await interaction.reply({
           content: `⚠️ Role "${roleName}" is not defined. Provide it using the /${interaction.commandName} command's "${roleName}" option.`,
-          flags: MessageFlags.Ephemeral
+          flags: MessageFlags.Ephemeral,
         });
         return;
       }
@@ -93,12 +101,17 @@ export default {
     await interaction.deferReply();
 
     const groups = interaction.options.getString('groups');
-    const groupNames = groups.split(/[\s,;]+/).map(n => n.trim()).filter(Boolean);
+    const groupNames = groups
+      .split(/[\s,;]+/)
+      .map((n) => n.trim())
+      .filter(Boolean);
 
-    await interaction.editReply([
-      `🔄 **Setting up reception for ${YEAR}...**`,
-      `🔄 Creating roles...`,
-    ].join('\n'));
+    await interaction.editReply(
+      [
+        `🔄 **Setting up reception for ${YEAR}...**`,
+        `🔄 Creating roles...`,
+      ].join('\n')
+    );
 
     const createdRoles = [];
     const groupRoles = new Map();
@@ -108,7 +121,7 @@ export default {
         name,
         permissions: [],
         mentionable: true,
-        reason: `Created by ${interaction.user.tag} using /${interaction.commandName}`
+        reason: `Created by ${interaction.user.tag} using /${interaction.commandName}`,
       });
       createdRoles.push(`<@&${role.id}> (${role.name})`);
       groupRoles.set(name, role);
@@ -117,15 +130,21 @@ export default {
 
     await fs.writeFile(
       RECEPTION_DATA,
-      JSON.stringify({ roles: roleIds, groups: groupRoleIds, year: YEAR }, null, 2),
+      JSON.stringify(
+        { roles: roleIds, groups: groupRoleIds, year: YEAR },
+        null,
+        2
+      ),
       'utf8'
     );
 
-    await interaction.editReply([
-      `🔄 **Setting up reception for ${YEAR}...**`,
-      `✅ Created roles: ${createdRoles.join(', ')}`,
-      `🔄 Creating channels...`,
-    ].join('\n'));
+    await interaction.editReply(
+      [
+        `🔄 **Setting up reception for ${YEAR}...**`,
+        `✅ Created roles: ${createdRoles.join(', ')}`,
+        `🔄 Creating channels...`,
+      ].join('\n')
+    );
 
     const category = await interaction.guild.channels.create({
       name: `Reception ${YEAR}`,
@@ -136,27 +155,27 @@ export default {
           deny: [PermissionsBitField.Flags.ViewChannel],
         },
         {
-          id: roleIds["nollan"],
+          id: roleIds['nollan'],
           allow: [PermissionsBitField.Flags.ViewChannel],
         },
         {
-          id: roleIds["ingen"],
+          id: roleIds['ingen'],
           allow: [PermissionsBitField.Flags.ViewChannel],
         },
         {
-          id: roleIds["mux"],
+          id: roleIds['mux'],
           allow: [PermissionsBitField.Flags.ViewChannel],
         },
         {
-          id: roleIds["fadder"],
+          id: roleIds['fadder'],
           allow: [PermissionsBitField.Flags.ViewChannel],
         },
         {
-          id: roleIds["doq"],
+          id: roleIds['doq'],
           allow: [PermissionsBitField.Flags.ViewChannel],
         },
       ],
-      reason: `Created by ${interaction.user.tag} using /${interaction.commandName}`
+      reason: `Created by ${interaction.user.tag} using /${interaction.commandName}`,
     });
 
     const createdChannels = [];
@@ -169,43 +188,43 @@ export default {
           id: interaction.guild.roles.everyone,
           deny: [
             PermissionsBitField.Flags.ViewChannel,
-            PermissionsBitField.Flags.SendMessages
+            PermissionsBitField.Flags.SendMessages,
           ],
         },
         {
-          id: roleIds["nollan"],
+          id: roleIds['nollan'],
           allow: [PermissionsBitField.Flags.ViewChannel],
         },
         {
-          id: roleIds["ingen"],
+          id: roleIds['ingen'],
           allow: [
             PermissionsBitField.Flags.ViewChannel,
-            PermissionsBitField.Flags.SendMessages
+            PermissionsBitField.Flags.SendMessages,
           ],
         },
         {
-          id: roleIds["mux"],
+          id: roleIds['mux'],
           allow: [
             PermissionsBitField.Flags.ViewChannel,
-            PermissionsBitField.Flags.SendMessages
+            PermissionsBitField.Flags.SendMessages,
           ],
         },
         {
-          id: roleIds["fadder"],
+          id: roleIds['fadder'],
           allow: [
             PermissionsBitField.Flags.ViewChannel,
-            PermissionsBitField.Flags.SendMessages
+            PermissionsBitField.Flags.SendMessages,
           ],
         },
         {
-          id: roleIds["doq"],
+          id: roleIds['doq'],
           allow: [
             PermissionsBitField.Flags.ViewChannel,
-            PermissionsBitField.Flags.SendMessages
+            PermissionsBitField.Flags.SendMessages,
           ],
         },
       ],
-      reason: `Created by ${interaction.user.tag} using /${interaction.commandName}`
+      reason: `Created by ${interaction.user.tag} using /${interaction.commandName}`,
     });
     createdChannels.push(`<#${announcements.id}> (${announcements.name})`);
 
@@ -213,7 +232,7 @@ export default {
       name: 'general',
       type: ChannelType.GuildText,
       parent: category.id,
-      reason: `Created by ${interaction.user.tag} using /${interaction.commandName}`
+      reason: `Created by ${interaction.user.tag} using /${interaction.commandName}`,
     });
     createdChannels.push(`<#${general.id}> (${general.name})`);
 
@@ -229,11 +248,11 @@ export default {
             deny: [PermissionsBitField.Flags.ViewChannel],
           },
           {
-            id: roleIds["ingen"],
+            id: roleIds['ingen'],
             allow: [PermissionsBitField.Flags.ViewChannel],
           },
           {
-            id: roleIds["mux"],
+            id: roleIds['mux'],
             allow: [PermissionsBitField.Flags.ViewChannel],
           },
           {
@@ -241,43 +260,55 @@ export default {
             allow: [PermissionsBitField.Flags.ViewChannel],
           },
         ],
-        reason: `Created by ${interaction.user.tag} using /${interaction.commandName}`
+        reason: `Created by ${interaction.user.tag} using /${interaction.commandName}`,
       });
       createdChannels.push(`<#${channel.id}> (${channel.name})`);
     }
 
-    await interaction.editReply([
-      `🔄 **Setting up reception for ${YEAR}...**`,
-      `✅ Created roles: ${createdRoles.join(', ')}`,
-      `✅ Created channels: ${createdChannels.join(', ')}`,
-      `🔄 Editing old roles...`,
-    ].join('\n'));
+    await interaction.editReply(
+      [
+        `🔄 **Setting up reception for ${YEAR}...**`,
+        `✅ Created roles: ${createdRoles.join(', ')}`,
+        `✅ Created channels: ${createdChannels.join(', ')}`,
+        `🔄 Editing old roles...`,
+      ].join('\n')
+    );
 
     const bot = await interaction.guild.members.fetchMe();
     const botRole = bot.roles.highest.position;
     const roleSettings = {};
     for (const role of interaction.guild.roles.cache.values()) {
-      if (!receptionRoles.includes(role.id) && !role.managed && role.position < botRole) {
+      if (
+        !receptionRoles.includes(role.id) &&
+        !role.managed &&
+        role.position < botRole
+      ) {
         roleSettings[role.id] = {
           color: role.color,
-          hoist: role.hoist
+          hoist: role.hoist,
         };
         await role.edit({
           color: 0,
           hoist: false,
-          reason: `Edited by ${interaction.user.tag} using /${interaction.commandName}`
+          reason: `Edited by ${interaction.user.tag} using /${interaction.commandName}`,
         });
       }
     }
-    await fs.writeFile(ROLE_SETTINGS, JSON.stringify(roleSettings, null, 2), 'utf8');
+    await fs.writeFile(
+      ROLE_SETTINGS,
+      JSON.stringify(roleSettings, null, 2),
+      'utf8'
+    );
 
-    await interaction.editReply([
-      `✅ **Successfully set up reception for ${YEAR}!**`,
-      `✅ Created roles: ${createdRoles.join(', ')}`,
-      `✅ Created channels: ${createdChannels.join(', ')}`,
-      `✅ Edited old roles to not have color and displayed separately`,
-      `\nℹ️ Make sure to fix the onboarding questions to be able to get the nØllan role.`,
-      `       Double check that no roles that grant access to other channels can be selected in the onboarding.`
-    ].join('\n'));
+    await interaction.editReply(
+      [
+        `✅ **Successfully set up reception for ${YEAR}!**`,
+        `✅ Created roles: ${createdRoles.join(', ')}`,
+        `✅ Created channels: ${createdChannels.join(', ')}`,
+        `✅ Edited old roles to not have color and displayed separately`,
+        `\nℹ️ Make sure to fix the onboarding questions to be able to get the nØllan role.`,
+        `       Double check that no roles that grant access to other channels can be selected in the onboarding.`,
+      ].join('\n')
+    );
   },
 };

@@ -7,23 +7,30 @@ const RECEPTION_DATA = path.resolve('reception_data.json');
 export default {
   data: new SlashCommandBuilder()
     .setName('removereception')
-    .setDescription('Removes the server for reception. Resetting everything to default.')
-    .addStringOption(option =>
-      option.setName("receptioncategory")
-        .setDescription("Name of the reception category")
+    .setDescription(
+      'Removes the server for reception. Resetting everything to default.'
+    )
+    .addStringOption((option) =>
+      option
+        .setName('receptioncategory')
+        .setDescription('Name of the reception category')
         .setRequired(true)
     )
-    .addStringOption(option =>
-      option.setName("archivecategory")
-        .setDescription("Name of the archive category")
+    .addStringOption((option) =>
+      option
+        .setName('archivecategory')
+        .setDescription('Name of the archive category')
         .setRequired(true)
     ),
   async execute(interaction) {
     await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 
-    const receptionCategoryName = interaction.options.getString('receptioncategory');
+    const receptionCategoryName =
+      interaction.options.getString('receptioncategory');
     const receptionCategory = interaction.guild.channels.cache.find(
-      channel => channel.type === ChannelType.GuildCategory && channel.name === receptionCategoryName
+      (channel) =>
+        channel.type === ChannelType.GuildCategory &&
+        channel.name === receptionCategoryName
     );
     if (!receptionCategory) {
       await interaction.editReply(
@@ -32,13 +39,16 @@ export default {
       return;
     }
 
-    const archiveCategoryName = interaction.options.getString('archivecategory');
+    const archiveCategoryName =
+      interaction.options.getString('archivecategory');
     const archiveCategory = interaction.guild.channels.cache.find(
-      channel => channel.type === ChannelType.GuildCategory && channel.name === archiveCategoryName
+      (channel) =>
+        channel.type === ChannelType.GuildCategory &&
+        channel.name === archiveCategoryName
     );
     if (!archiveCategory) {
       await interaction.editReply(
-        `Archive category "${archiveCategoryName}" not found.`,
+        `Archive category "${archiveCategoryName}" not found.`
       );
       return;
     }
@@ -48,7 +58,8 @@ export default {
     );
 
     const channels = interaction.guild.channels.cache.filter(
-      channel => channel.parentId === receptionCategory.id);
+      (channel) => channel.parentId === receptionCategory.id
+    );
     const data = JSON.parse(await fs.readFile(RECEPTION_DATA, 'utf8'));
     const year = data.year ?? new Date().getFullYear();
     for (const channel of channels.values()) {
@@ -56,12 +67,16 @@ export default {
       await channel.setName(`Ø${year.toString().slice(-2)}-${channel.name}`);
     }
 
-    await receptionCategory.delete(`Removed by ${interaction.user.tag} using /${interaction.commandName}`);
+    await receptionCategory.delete(
+      `Removed by ${interaction.user.tag} using /${interaction.commandName}`
+    );
 
     for (const roleId of Object.values(data.groups)) {
       const role = interaction.guild.roles.cache.get(roleId);
       if (role) {
-        await role.delete(`Removed by ${interaction.user.tag} using /${interaction.commandName}`);
+        await role.delete(
+          `Removed by ${interaction.user.tag} using /${interaction.commandName}`
+        );
       }
     }
 
