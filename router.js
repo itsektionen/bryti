@@ -1,4 +1,5 @@
 import { MessageFlags } from 'discord.js';
+import { logError, logInfo } from './utils/log.js';
 import { parseCustomId } from './utils/customId.js';
 import { logThrottled } from './utils/logThrottled.js';
 
@@ -13,14 +14,25 @@ async function replyError(interaction, message) {
       await interaction.reply(body);
     }
   } catch (error) {
-    console.error('Could not send the error reply.', error);
+    logError('Could not send the error reply.', error);
   }
+}
+
+function describeOptions(options) {
+  return options
+    .map((option) =>
+      option.options
+        ? `${option.name} ${describeOptions(option.options)}`
+        : `${option.name}:${option.value}`
+    )
+    .join(' ')
+    .trimEnd();
 }
 
 async function handleCommand(interaction) {
   const command = interaction.client.commands.get(interaction.commandName);
   if (!command) {
-    console.error(`Unknown command /${interaction.commandName}.`);
+    logError(`Unknown command /${interaction.commandName}.`);
     await replyError(
       interaction,
       `Unknown command /${interaction.commandName}.`
@@ -30,8 +42,11 @@ async function handleCommand(interaction) {
 
   try {
     await command.execute(interaction);
+    logInfo(
+      `${interaction.user.tag} (${interaction.user.id}) ran "/${interaction.commandName} ${describeOptions(interaction.options.data)}" in ${interaction.guild?.name} (${interaction.guild?.id})`
+    );
   } catch (error) {
-    console.error(`/${interaction.commandName} failed.`, error);
+    logError(`/${interaction.commandName} failed.`, error);
     await replyError(
       interaction,
       `Something went wrong while running /${interaction.commandName}.`
@@ -59,7 +74,7 @@ async function handleAutocomplete(interaction) {
       AUTOCOMPLETE_ERROR_WINDOW_MS,
       (hidden) => {
         const repeats = hidden > 0 ? ` (${hidden} repeat(s) hidden)` : '';
-        console.error(
+        logError(
           `Autocomplete for /${interaction.commandName} failed${repeats}.`,
           error
         );
@@ -72,7 +87,7 @@ async function handleComponent(interaction, handlers, kind) {
   const { namespace, action, id } = parseCustomId(interaction.customId);
   const handler = handlers.get(namespace);
   if (!handler) {
-    console.error(`Unknown ${kind} "${interaction.customId}".`);
+    logError(`Unknown ${kind} "${interaction.customId}".`);
     await replyError(interaction, 'This control is no longer available.');
     return;
   }
@@ -80,7 +95,7 @@ async function handleComponent(interaction, handlers, kind) {
   try {
     await handler.execute(interaction, { action, id });
   } catch (error) {
-    console.error(`${kind} "${interaction.customId}" failed.`, error);
+    logError(`${kind} "${interaction.customId}" failed.`, error);
     await replyError(interaction, 'Something went wrong.');
   }
 }

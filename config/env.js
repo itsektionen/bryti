@@ -1,6 +1,7 @@
 import 'dotenv/config';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { logError, logInfo } from '../utils/log.js';
 
 const rootDir = fileURLToPath(new URL('..', import.meta.url));
 
@@ -22,7 +23,7 @@ const missing = Object.entries({
   .map(([name]) => name);
 
 if (missing.length > 0) {
-  console.error(
+  logError(
     `Missing environment variable(s): ${missing.join(', ')}.\n` +
     `Copy .env.example to .env and fill it in.`
   );
@@ -40,7 +41,7 @@ export const env = {
 };
 
 export function logTarget(action) {
-  console.log(
+  logInfo(
     `${action} in ${env.name.toUpperCase()} mode (guild ${env.guildId}).`
   );
 }

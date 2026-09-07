@@ -2,6 +2,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import Database from 'better-sqlite3';
 import { env } from '../config/env.js';
+import { logInfo } from '../utils/log.js';
 import { migrations } from './migrations.js';
 
 fs.mkdirSync(path.dirname(env.dbPath), { recursive: true });
@@ -27,7 +28,7 @@ function migrate() {
     }
   })();
 
-  console.info(
+  logInfo(
     `Database migrated from version ${current} to ${todo.at(-1).version}.`
   );
 }

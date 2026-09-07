@@ -4,6 +4,7 @@ import { getCommands } from './getCommands.js';
 import { getHandlers } from './getHandlers.js';
 import { createRouter } from './router.js';
 import { purgeExpiredPending } from './db/pending.js';
+import { logInfo, logWarn } from './utils/log.js';
 
 const client = new Client({
   intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMembers],
@@ -15,14 +16,14 @@ client.buttonHandlers = await getHandlers(env.rootDir, 'buttons');
 client.modalHandlers = await getHandlers(env.rootDir, 'modals');
 
 client.rest.on('invalidRequestWarning', ({ count, remainingTime }) => {
-  console.warn(
+  logWarn(
     `${count} invalid requests sent, ${remainingTime}ms left in this window.`
   );
 });
 
 client.once(Events.ClientReady, (readyClient) => {
-  console.info(
-    `\n${readyClient.readyAt}: Bot ready and connected!\nLogged in as ${readyClient.user.tag} (${readyClient.user.id}) on ${readyClient.guilds.cache.size} server(s).`
+  logInfo(
+    `Bot ready as ${readyClient.user.tag} (${readyClient.user.id}) on ${readyClient.guilds.cache.size} server${readyClient.guilds.cache.size > 1 ? 's' : ''}.`
   );
   readyClient.user.setActivity('Running around...', {
     type: ActivityType.Custom,
@@ -30,7 +31,7 @@ client.once(Events.ClientReady, (readyClient) => {
 
   const purged = purgeExpiredPending();
   if (purged > 0) {
-    console.info(`Removed ${purged} expired pending row(s).`);
+    logInfo(`Removed ${purged} expired pending row(s).`);
   }
 });
 

@@ -1,6 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
+import { logWarn } from './utils/log.js';
 
 export async function loadModules(dir) {
   if (!fs.existsSync(dir)) return [];
@@ -24,13 +25,13 @@ export function collect(modules, { keyOf, isValid, label }) {
     if (value === undefined) continue;
 
     if (!isValid(value)) {
-      console.warn(`${filePath} is not a valid ${label}. Skipping.`);
+      logWarn(`${filePath} is not a valid ${label}. Skipping.`);
       continue;
     }
 
     const key = keyOf(value);
     if (map.has(key)) {
-      console.warn(`${filePath} reuses the ${label} name "${key}". Skipping.`);
+      logWarn(`${filePath} reuses the ${label} name "${key}". Skipping.`);
       continue;
     }
     map.set(key, value);

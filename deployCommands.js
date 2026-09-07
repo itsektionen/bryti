@@ -1,6 +1,7 @@
 import { REST, Routes } from 'discord.js';
 import { getCommands } from './getCommands.js';
 import { env, logTarget } from './config/env.js';
+import { logError, logInfo } from './utils/log.js';
 
 const commands = await getCommands(env.rootDir);
 const rest = new REST().setToken(env.token);
@@ -13,8 +14,8 @@ try {
     { body: commands }
   );
 
-  console.log(`Successfully reloaded ${data.length} application (/) commands.`);
+  logInfo(`Successfully reloaded ${data.length} application (/) commands.`);
 } catch (error) {
-  console.error(error);
+  logError(error);
   process.exitCode = 1;
 }
