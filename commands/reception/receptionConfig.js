@@ -10,6 +10,7 @@ import {
   setReceptionRoleAppearance,
   getReceptionRoles,
 } from '../../db/receptionRoles.js';
+import { ephemeralMessage } from '../../utils/messages.js';
 import { ADMIN_PERMISSION } from '../../utils/permissions.js';
 import { toColor, getColorInfo, rowToColors } from '../../utils/colors.js';
 
@@ -17,12 +18,6 @@ const slugChoices = ROLE_SLUGS.map((slug) => ({
   name: ROLE_LABELS[slug],
   value: slug,
 }));
-
-const ephemeralMessage = (content) => ({
-  content,
-  flags: MessageFlags.Ephemeral,
-  allowedMentions: { parse: [] },
-});
 
 async function handleRoles(interaction) {
   const changed = [];
