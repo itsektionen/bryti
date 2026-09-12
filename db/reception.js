@@ -12,10 +12,18 @@ const updateReception = db.prepare(`
     started_at=excluded.started_at
 `);
 
+const setState = db.prepare(`
+  UPDATE reception SET state=? WHERE guild_id=?
+`);
+
 export function getReception(guildId) {
   return selectReception.get(guildId) ?? null;
 }
 
 export function startReception(guildId, { year, categoryId }) {
   updateReception.run(guildId, 'running', year, categoryId, Date.now());
+}
+
+export function endReception(guildId) {
+  setState.run('ended', guildId);
 }

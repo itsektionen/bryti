@@ -5,9 +5,16 @@ import {
   PermissionFlagsBits,
 } from 'discord.js';
 import {
+  getReception,
+  startReception,
+  endReception,
+} from '../../db/reception.js';
+import {
   hasOpenBackups,
   saveRoleBackup,
   markRoleStripped,
+  getOpenBackups,
+  markRoleRestored,
 } from '../../db/roleBackup.js';
 import {
   ROLE_SLUGS,
@@ -27,7 +34,6 @@ import { runLimited } from '../../utils/runLimited.js';
 import { ephemeralMessage } from '../../utils/messages.js';
 import { RECEPTION_ADMIN_ROLES_KEY } from '../../db/keys.js';
 import { requireAllowedRole } from '../../utils/permissions.js';
-import { getReception, startReception } from '../../db/reception.js';
 
 function parseGroups(raw) {
   return raw
@@ -293,6 +299,135 @@ async function handleArchive(interaction) {
   );
 }
 
+async function handleEnd(interaction) {
+  if (!(await requireAllowedRole(interaction, RECEPTION_ADMIN_ROLES_KEY))) {
+    return;
+  }
+
+  const { guild, guildId } = interaction;
+  const reason = `Reception end by ${interaction.user.tag}`;
+
+  const openBackups = getOpenBackups(guildId);
+  if (openBackups.length === 0) {
+    await interaction.reply(
+      ephemeralMessage('No roles are waiting to be restored.')
+    );
+    return;
+  }
+
+  await interaction.deferReply();
+
+  const restored = [];
+  let skipped = 0;
+  await runLimited(openBackups, 3, async (row) => {
+    const role = guild.roles.cache.get(row.role_id);
+    if (!role) {
+      skipped++;
+      return;
+    }
+    await role.edit({
+      colors: {
+        primaryColor: row.primary_color ?? 0,
+        secondaryColor: row.secondary_color,
+        tertiaryColor: row.tertiary_color,
+      },
+      hoist: row.hoist === 1,
+      reason,
+    });
+    markRoleRestored(guildId, role.id);
+    restored.push(role);
+  });
+
+  endReception(guildId);
+
+  const mentions = restored.map((role) => `<@&${role.id}>`).join(', ');
+  const restoredNote =
+    restored.length > 0 && mentions.length <= 1000 ? `: ${mentions}` : '.';
+  const skippedNote =
+    skipped > 0
+      ? `\nSkipped ${skipped} deleted role${skipped === 1 ? '' : 's'}.`
+      : '';
+  const clearHint =
+    '\nℹ️ Run `/reception clear target:nollan` to remove everyone from the nØllan role so they can access the rest of the server.';
+  await interaction.editReply(
+    ephemeralMessage(
+      `✅ Restored ${restored.length} role${restored.length === 1 ? '' : 's'}${restoredNote}${skippedNote}${clearHint}`
+    )
+  );
+}
+
+async function handleStatus(interaction) {
+  const reception = getReception(interaction.guildId);
+  if (!reception) {
+    await interaction.reply(
+      ephemeralMessage('Reception was never set up here.')
+    );
+    return;
+  }
+
+  const open = getOpenBackups(interaction.guildId).length;
+  await interaction.reply(
+    ephemeralMessage(
+      `State: ${reception.state}\nYear: ${reception.year}\n${open} role${open === 1 ? '' : 's'} still waiting to be restored.`
+    )
+  );
+}
+
+async function handleClear(interaction) {
+  if (!(await requireAllowedRole(interaction, RECEPTION_ADMIN_ROLES_KEY))) {
+    return;
+  }
+
+  const { guild, guildId } = interaction;
+  const reason = `Reception clear by ${interaction.user.tag}`;
+  const target = interaction.options.getString('target');
+
+  const roles = getReceptionRoles(guildId);
+  const slugId = (slug) => roles[slug]?.role_id;
+  const roleIds = (
+    target === 'all'
+      ? [
+          slugId('nollan'),
+          slugId('ingen'),
+          slugId('mux'),
+          slugId('fadder'),
+          slugId('doq'),
+        ]
+      : [slugId(target)]
+  ).filter(Boolean);
+
+  if (roleIds.length === 0) {
+    await interaction.reply(
+      ephemeralMessage('Nothing is configured for that role.')
+    );
+    return;
+  }
+
+  await interaction.deferReply();
+  await guild.members.fetch();
+
+  let removed = 0;
+  const cleared = [];
+  for (const roleId of roleIds) {
+    const role = guild.roles.cache.get(roleId);
+    if (!role) {
+      continue;
+    }
+    cleared.push(role);
+    await runLimited([...role.members.values()], 3, async (member) => {
+      await member.roles.remove(role, reason);
+      removed++;
+    });
+  }
+
+  const mentions = cleared.map((role) => `<@&${role.id}>`).join(', ');
+  await interaction.editReply(
+    ephemeralMessage(
+      `✅ Removed ${mentions} from ${removed} member${removed === 1 ? '' : 's'}.`
+    )
+  );
+}
+
 export default {
   data: new SlashCommandBuilder()
     .setName('reception')
@@ -314,6 +449,35 @@ export default {
     )
     .addSubcommand((command) =>
       command
+        .setName('end')
+        .setDescription('Restore every stripped role to its saved appearance.')
+    )
+    .addSubcommand((command) =>
+      command
+        .setName('status')
+        .setDescription('Show the reception state and roles left to restore.')
+    )
+    .addSubcommand((command) =>
+      command
+        .setName('clear')
+        .setDescription('Remove all members from a reception role.')
+        .addStringOption((option) =>
+          option
+            .setName('target')
+            .setDescription('Which role to clear.')
+            .setRequired(true)
+            .addChoices(
+              { name: 'nØllan', value: 'nollan' },
+              { name: 'INGEN & NÅGON', value: 'ingen' },
+              { name: 'MUX', value: 'mux' },
+              { name: 'Fadder', value: 'fadder' },
+              { name: 'Doq', value: 'doq' },
+              { name: 'All', value: 'all' }
+            )
+        )
+    )
+    .addSubcommand((command) =>
+      command
         .setName('archive')
         .setDescription(
           'Move reception channels to an archive and delete nØllegroup roles.'
@@ -331,6 +495,9 @@ export default {
     const subcommand = interaction.options.getSubcommand();
     const handler = {
       setup: handleSetup,
+      end: handleEnd,
+      status: handleStatus,
+      clear: handleClear,
       archive: handleArchive,
     }[subcommand];
 
