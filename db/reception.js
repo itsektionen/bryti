@@ -12,8 +12,12 @@ const updateReception = db.prepare(`
     started_at=excluded.started_at
 `);
 
-const setState = db.prepare(`
-  UPDATE reception SET state=? WHERE guild_id=?
+const endState = db.prepare(
+  `UPDATE reception SET state='ended' WHERE guild_id=? AND state='running'`
+);
+
+const resetState = db.prepare(`
+  UPDATE reception SET state='off', category_id=NULL WHERE guild_id=?
 `);
 
 export function getReception(guildId) {
@@ -25,5 +29,9 @@ export function startReception(guildId, { year, categoryId }) {
 }
 
 export function endReception(guildId) {
-  setState.run('ended', guildId);
+  endState.run(guildId);
+}
+
+export function resetReception(guildId) {
+  resetState.run(guildId);
 }

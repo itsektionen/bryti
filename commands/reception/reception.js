@@ -8,6 +8,7 @@ import {
   getReception,
   startReception,
   endReception,
+  resetReception,
 } from '../../db/reception.js';
 import {
   hasOpenBackups,
@@ -29,6 +30,7 @@ import {
 import {
   saveReceptionGroup,
   getReceptionGroups,
+  clearReceptionGroups,
 } from '../../db/receptionGroups.js';
 import { runLimited } from '../../utils/runLimited.js';
 import { ephemeralMessage } from '../../utils/messages.js';
@@ -134,19 +136,20 @@ async function handleSetup(interaction) {
 
   const everyone = guild.roles.everyone;
   const me = guild.members.me;
+  const botOverwrite = {
+    id: me.id,
+    allow: [
+      PermissionFlagsBits.ViewChannel,
+      PermissionFlagsBits.ManageChannels,
+    ],
+  };
 
   const category = await guild.channels.create({
     name: `Reception ${year}`,
     type: ChannelType.GuildCategory,
     permissionOverwrites: [
       { id: everyone, deny: [PermissionFlagsBits.ViewChannel] },
-      {
-        id: me.id,
-        allow: [
-          PermissionFlagsBits.ViewChannel,
-          PermissionFlagsBits.ManageChannels,
-        ],
-      },
+      botOverwrite,
       ...ROLE_SLUGS.map((slug) => ({
         id: roleId[slug],
         allow: [PermissionFlagsBits.ViewChannel],
@@ -167,6 +170,7 @@ async function handleSetup(interaction) {
           PermissionFlagsBits.SendMessages,
         ],
       },
+      botOverwrite,
       ...['nollan', 'fadder', 'doq'].map((slug) => ({
         id: roleId[slug],
         allow: [PermissionFlagsBits.ViewChannel],
@@ -197,6 +201,7 @@ async function handleSetup(interaction) {
       parent: category.id,
       permissionOverwrites: [
         { id: everyone, deny: [PermissionFlagsBits.ViewChannel] },
+        botOverwrite,
         { id: roleId.ingen, allow: [PermissionFlagsBits.ViewChannel] },
         { id: roleId.mux, allow: [PermissionFlagsBits.ViewChannel] },
         { id: role.id, allow: [PermissionFlagsBits.ViewChannel] },
@@ -258,6 +263,13 @@ async function handleArchive(interaction) {
     return;
   }
 
+  if (reception.state !== 'ended') {
+    await interaction.reply(
+      ephemeralMessage('Run `/reception end` before archiving.')
+    );
+    return;
+  }
+
   const archiveOption = interaction.options.getChannel('archive');
   if (archiveOption.type !== ChannelType.GuildCategory) {
     await interaction.reply(
@@ -281,8 +293,8 @@ async function handleArchive(interaction) {
     (channel) => channel.parentId === receptionCategory.id
   );
   for (const channel of children.values()) {
-    await channel.setParent(archiveCategory.id, { lockPermissions: true });
     await channel.setName(`${prefix}${channel.name}`);
+    await channel.setParent(archiveCategory.id, { lockPermissions: true });
   }
 
   await receptionCategory.delete(reason);
@@ -293,6 +305,9 @@ async function handleArchive(interaction) {
       await role.delete(reason);
     }
   }
+
+  resetReception(guildId);
+  clearReceptionGroups(guildId);
 
   await interaction.editReply(
     `✅ Archived reception ${year}. Moved ${children.size} channel${children.size === 1 ? '' : 's'} and removed the nØllegroup roles.`
@@ -322,6 +337,7 @@ async function handleEnd(interaction) {
   await runLimited(openBackups, 3, async (row) => {
     const role = guild.roles.cache.get(row.role_id);
     if (!role) {
+      markRoleRestored(guildId, row.role_id);
       skipped++;
       return;
     }
@@ -347,8 +363,7 @@ async function handleEnd(interaction) {
     skipped > 0
       ? `\nSkipped ${skipped} deleted role${skipped === 1 ? '' : 's'}.`
       : '';
-  const clearHint =
-    '\nℹ️ Run `/reception clear target:nollan` to remove everyone from the nØllan role so they can access the rest of the server.';
+  const clearHint = `\nℹ️ Run \`/reception clear target:${ROLE_LABELS['nollan']}\` to remove everyone from the nØllan role so they can access the rest of the server.`;
   await interaction.editReply(
     ephemeralMessage(
       `✅ Restored ${restored.length} role${restored.length === 1 ? '' : 's'}${restoredNote}${skippedNote}${clearHint}`

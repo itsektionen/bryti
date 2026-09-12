@@ -13,10 +13,18 @@ const updateGroup = db.prepare(`
     channel_id=excluded.channel_id
 `);
 
+const deleteGroups = db.prepare(
+  `DELETE FROM reception_groups WHERE guild_id=?`
+);
+
 export function getReceptionGroups(guildId) {
   return selectGroups.all(guildId);
 }
 
 export function saveReceptionGroup(guildId, { name, roleId, channelId }) {
   updateGroup.run(guildId, name, roleId, channelId);
+}
+
+export function clearReceptionGroups(guildId) {
+  deleteGroups.run(guildId);
 }

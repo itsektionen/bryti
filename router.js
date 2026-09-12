@@ -49,7 +49,7 @@ async function handleCommand(interaction) {
     logError(`/${interaction.commandName} failed.`, error);
     await replyError(
       interaction,
-      `Something went wrong while running /${interaction.commandName}.`
+      `Something went wrong while running \`/${interaction.commandName}\`.`
     );
   }
 }
